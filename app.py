@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
-from forms import UserAddForm, LoginForm, MessageForm
+from forms import UserAddEditForm, LoginForm, MessageForm
 from models import db, connect_db, User, Message
 
 CURR_USER_KEY = "curr_user"
@@ -31,6 +31,7 @@ connect_db(app)
 @app.before_request
 def add_user_to_g():
     """If we're logged in, add curr user to Flask global."""
+    print("CAKE!!!!!! AND MAYBE PIE!!!!!")
 
     if CURR_USER_KEY in session:
         g.user = User.query.get(session[CURR_USER_KEY])
@@ -64,7 +65,7 @@ def signup():
     and re-present form.
     """
 
-    form = UserAddForm()
+    form = UserAddEditForm()
 
     if form.validate_on_submit():
         try:
@@ -72,6 +73,8 @@ def signup():
                 username=form.username.data,
                 password=form.password.data,
                 email=form.email.data,
+                bio=form.bio.data,
+                location=form.location.data,
                 image_url=form.image_url.data or User.image_url.default.arg,
             )
             db.session.commit()
@@ -110,9 +113,9 @@ def login():
 @app.route('/logout')
 def logout():
     """Handle logout of user."""
-    user = User.query.get_or_404(session[CURR_USER_KEY])
-    flash(f"Goodbye, {user.username}", "success")
+    user = User.query.get_or_404(g.user.id)
     session.clear()
+    flash(f"Goodbye, {user.username}", "success")
     return redirect('/login')
     # IMPLEMENT THIS
 
@@ -208,7 +211,29 @@ def stop_following(follow_id):
 @app.route('/users/profile', methods=["GET", "POST"])
 def profile():
     """Update profile for current user."""
+    user = User.query.get_or_404(session[CURR_USER_KEY])
 
+    # Remove default URL if it exists
+    if user.image_url == User.image_url.default.arg:
+        user.image_url = ''
+    if user.header_image_url == User.header_image_url.default.arg:
+        user.header_image_url = ''
+    form = UserAddEditForm(obj=user)
+
+    if form.validate_on_submit():
+        if user.confirm_password(form.password.data):
+            user.username = form.username.data,
+            user.email = form.email.data,
+            user.bio = form.bio.data,
+            user.location = form.location.data,
+            user.header_image_url = form.header_image_url.data or User.header_image_url.default.arg,
+            user.image_url = form.image_url.data or User.image_url.default.arg,
+            db.session.commit()
+            flash(f"Updated your profile!", 'success')
+            return redirect(f"/users/{user.id}")
+        else:
+            flash("Authentication error", "danger")
+    return render_template("users/edit.html", form=form)
     # IMPLEMENT THIS
 
 
@@ -291,9 +316,10 @@ def homepage():
     """
 
     if g.user:
-        messages = (Message.query.order_by(
-            Message.timestamp.desc()).limit(100).all())
-
+        following_ids = {leader.id
+                         for leader in g.user.following}.union({g.user.id})
+        messages = (Message.query.order_by(Message.timestamp.desc()).filter(
+            Message.user_id.in_(following_ids)).limit(100).all())
         return render_template('home.html', messages=messages)
 
     else:

@@ -55,17 +55,11 @@ class User(db.Model):
     )
 
     header_image_url = db.Column(
-        db.Text,
-        default="/static/images/warbler-hero.jpg"
-    )
+        db.Text, default="/static/images/warbler-hero.jpg")
 
-    bio = db.Column(
-        db.Text,
-    )
+    bio = db.Column(db.Text, )
 
-    location = db.Column(
-        db.Text,
-    )
+    location = db.Column(db.Text, )
 
     password = db.Column(
         db.Text,
@@ -73,7 +67,7 @@ class User(db.Model):
     )
 
     messages = db.relationship('Message', backref='user')
-
+    # likes = backref to likes
     followers = db.relationship(
         "User",
         secondary="follows",
@@ -87,17 +81,24 @@ class User(db.Model):
     def is_followed_by(self, other_user):
         """Is this user followed by `other_user`?"""
 
-        found_user_list = [user for user in self.followers if user == other_user]
+        found_user_list = [
+            user for user in self.followers if user == other_user
+        ]
         return len(found_user_list) == 1
 
     def is_following(self, other_user):
         """Is this user following `other_use`?"""
 
-        found_user_list = [user for user in self.following if user == other_user]
+        found_user_list = [
+            user for user in self.following if user == other_user
+        ]
         return len(found_user_list) == 1
 
+    def confirm_password(self, input_password: str) -> bool:
+        return bcrypt.check_password_hash(self.password, input_password)
+
     @classmethod
-    def signup(cls, username, email, password, image_url):
+    def signup(cls, username, email, password, image_url, bio, location):
         """Sign up user.
 
         Hashes password and adds user to system.
@@ -110,7 +111,8 @@ class User(db.Model):
             email=email,
             password=hashed_pwd,
             image_url=image_url,
-        )
+            bio=bio,
+            location=location)
 
         db.session.add(user)
         return user
@@ -162,6 +164,22 @@ class Message(db.Model):
         db.ForeignKey('users.id', ondelete='CASCADE'),
         nullable=False,
     )
+    # likes = backref to Like
+
+
+class Like(db.Model):
+    """A like on a message"""
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete="CASCADE"),
+        primary_key=True)
+    message_id = db.Column(
+        db.Integer,
+        db.ForeignKey('messages.id', ondelete="CASCADE"),
+        primary_key=True)
+    user = db.relationship('User', backref='likes')
+    message = db.relationship('Message', backref='likes')
 
 
 def connect_db(app):
