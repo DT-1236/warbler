@@ -79,9 +79,16 @@ def signup():
             )
             db.session.commit()
 
-        except IntegrityError as e:
-            flash("Username already taken", 'danger')
-            return render_template('users/signup.html', form=form)
+        except (IntegrityError, InvalidRequestError) as error:
+            db.session.rollback()
+            if error.orig.diag.constraint_name == 'users_username_key':
+                form.username.errors.append("Username already exists")
+                return render_template("users/signup.html", form=form)
+            elif error.orig.diag.constraint_name == 'users_email_key':
+                form.email.errors.append("Email already exists")
+                return render_template("users/signup.html", form=form)
+            else:
+                raise error
 
         do_login(user)
 
@@ -244,19 +251,19 @@ def profile():
             else:
                 flash("Authentication error", "danger")
         except (InvalidRequestError, IntegrityError) as error:
-            # For some reason render templates don't work from here, but redirects do
+            # For some reason render templates require the rollback, but redirects do not
+            # There is some suspicion that redirects cause a new request which refreshes the g.user instance
+            db.session.rollback()
             if error.orig.diag.constraint_name == 'users_username_key':
+                form.username.errors.append("Username already exists")
                 return render_template("users/edit.html", form=form)
-                return redirect('/')
-                form.username.errors.append("Username Already exists")
-
+            elif error.orig.diag.constraint_name == 'users_email_key':
+                form.email.errors.append("Email already exists")
+                return render_template("users/edit.html", form=form)
             else:
-                import pdb
-                pdb.set_trace()
-            return render_template("users/edit.html", form=form)
+                raise error
 
     return render_template("users/edit.html", form=form)
-    # IMPLEMENT THIS
 
 
 @app.route('/users/delete', methods=["POST"])
