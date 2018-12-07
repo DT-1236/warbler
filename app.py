@@ -20,7 +20,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
 app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
-toolbar = DebugToolbarExtension(app)
+# toolbar = DebugToolbarExtension(app)
 
 connect_db(app)
 
@@ -102,8 +102,10 @@ def signup():
 def login():
     """Handle user login."""
 
-    form = LoginForm()
+    if g.user:
+        return redirect('/')
 
+    form = LoginForm(request.form)
     if form.validate_on_submit():
         user = User.authenticate(form.username.data, form.password.data)
 
@@ -227,6 +229,11 @@ def stop_following(follow_id):
 @app.route('/users/profile', methods=["GET", "POST"])
 def profile():
     """Update profile for current user."""
+
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
     user = User.query.get_or_404(session[CURR_USER_KEY])
 
     # Remove default URL if it exists
@@ -320,6 +327,11 @@ def messages_show(message_id):
 @app.route('/messages/<int:message_id>/like', methods=["POST"])
 def like_or_unlike_message(message_id):
     """Toggle message like status"""
+
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
     like = Like.query.get((g.user.id, message_id))
     if like:
         db.session.delete(like)

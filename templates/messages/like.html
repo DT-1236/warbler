@@ -1,3 +1,4 @@
+{% if message.user_id != g.user.id %}
 <form action="/messages/{{message.id}}/like" method="POST">
   <input type="hidden" value="{{g.current_path}}" name="path" />
   <button
@@ -10,3 +11,4 @@
      fa-heart like"
   ></button>
 </form>
+{% endif %}
