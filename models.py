@@ -97,6 +97,10 @@ class User(db.Model):
     def confirm_password(self, input_password: str) -> bool:
         return bcrypt.check_password_hash(self.password, input_password)
 
+    def count_likes(self) -> int:
+        """Returns the number of warbles liked by the user"""
+        return len(self.likes)
+
     @classmethod
     def signup(cls, username, email, password, image_url, bio, location):
         """Sign up user.
@@ -164,11 +168,20 @@ class Message(db.Model):
         db.ForeignKey('users.id', ondelete='CASCADE'),
         nullable=False,
     )
+
     # likes = backref to Like
+
+    def is_liked(self, user_id: int) -> bool:
+        """Returns a boolean indicating whether the user likes this message"""
+
+        return bool(
+            Like.query.filter_by(message_id=self.id, user_id=user_id).first())
 
 
 class Like(db.Model):
     """A like on a message"""
+
+    __tablename__ = 'likes'
 
     user_id = db.Column(
         db.Integer,
@@ -190,3 +203,4 @@ def connect_db(app):
 
     db.app = app
     db.init_app(app)
+    db.create_all()

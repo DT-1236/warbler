@@ -538,3 +538,12 @@ p.card-bio {
 .message-404 .form-inline input {
   flex: 1;
 }
+
+/* ================================ Likes */
+
+.like {
+  border: none;
+  /* Make the background transparent */
+  background-color: rgba(0, 0, 0, 0);
+  z-index: 10;
+}

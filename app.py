@@ -2,10 +2,10 @@ import os
 
 from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
 from forms import UserAddEditForm, LoginForm, MessageForm
-from models import db, connect_db, User, Message
+from models import db, connect_db, User, Message, Like
 
 CURR_USER_KEY = "curr_user"
 
@@ -31,13 +31,13 @@ connect_db(app)
 @app.before_request
 def add_user_to_g():
     """If we're logged in, add curr user to Flask global."""
-    print("CAKE!!!!!! AND MAYBE PIE!!!!!")
 
     if CURR_USER_KEY in session:
         g.user = User.query.get(session[CURR_USER_KEY])
 
     else:
         g.user = None
+    g.current_path = request.path
 
 
 def do_login(user):
@@ -154,6 +154,15 @@ def users_show(user_id):
     return render_template('users/show.html', user=user, messages=messages)
 
 
+@app.route('/users/<int:user_id>/likes')
+def show_liked_messages(user_id: int):
+    """Show page of liked messages"""
+    user = User.query.get_or_404(user_id)
+    message_ids = {like.message_id for like in user.likes}
+    messages = Message.query.filter(Message.id.in_(message_ids)).all()
+    return render_template("users/show.html", user=user, messages=messages)
+
+
 @app.route('/users/<int:user_id>/following')
 def show_following(user_id):
     """Show list of people this user is following."""
@@ -221,18 +230,31 @@ def profile():
     form = UserAddEditForm(obj=user)
 
     if form.validate_on_submit():
-        if user.confirm_password(form.password.data):
-            user.username = form.username.data,
-            user.email = form.email.data,
-            user.bio = form.bio.data,
-            user.location = form.location.data,
-            user.header_image_url = form.header_image_url.data or User.header_image_url.default.arg,
-            user.image_url = form.image_url.data or User.image_url.default.arg,
-            db.session.commit()
-            flash(f"Updated your profile!", 'success')
-            return redirect(f"/users/{user.id}")
-        else:
-            flash("Authentication error", "danger")
+        try:
+            if user.confirm_password(form.password.data):
+                user.username = form.username.data,
+                user.email = form.email.data,
+                user.bio = form.bio.data,
+                user.location = form.location.data,
+                user.header_image_url = form.header_image_url.data or User.header_image_url.default.arg,
+                user.image_url = form.image_url.data or User.image_url.default.arg,
+                db.session.commit()
+                flash(f"Updated your profile!", 'success')
+                return redirect(f"/users/{user.id}")
+            else:
+                flash("Authentication error", "danger")
+        except (InvalidRequestError, IntegrityError) as error:
+            # For some reason render templates don't work from here, but redirects do
+            if error.orig.diag.constraint_name == 'users_username_key':
+                return render_template("users/edit.html", form=form)
+                return redirect('/')
+                form.username.errors.append("Username Already exists")
+
+            else:
+                import pdb
+                pdb.set_trace()
+            return render_template("users/edit.html", form=form)
+
     return render_template("users/edit.html", form=form)
     # IMPLEMENT THIS
 
@@ -286,6 +308,21 @@ def messages_show(message_id):
 
     msg = Message.query.get(message_id)
     return render_template('messages/show.html', message=msg)
+
+
+@app.route('/messages/<int:message_id>/like', methods=["POST"])
+def like_or_unlike_message(message_id):
+    """Toggle message like status"""
+    like = Like.query.get((g.user.id, message_id))
+    if like:
+        db.session.delete(like)
+        # Remove flash with AJAX implementation
+        flash("Message unliked", "danger")
+    else:
+        db.session.add(Like(message_id=message_id, user_id=g.user.id))
+        flash("Message liked", "success")
+    db.session.commit()
+    return redirect(request.form['path'])
 
 
 @app.route('/messages/<int:message_id>/delete', methods=["POST"])

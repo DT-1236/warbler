@@ -1,7 +1,6 @@
 {% extends 'base.html' %}
 
 {% block content %}
-
   <div class="bg"></div>
   <div class="row justify-content-center">
     <div class="col-md-6">
@@ -32,6 +31,7 @@
               {% endif %}
             </div>
             <p class="single-message">{{ message.text }}</p>
+            {% include "messages/like.html"%}
             <span class="text-muted">{{ message.timestamp.strftime('%d %B %Y') }}</span>
           </div>
         </li>
