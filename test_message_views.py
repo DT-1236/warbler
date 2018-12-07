@@ -4,8 +4,8 @@
 #
 #    FLASK_ENV=production python -m unittest test_message_views.py
 
-
 import os
+from datetime import datetime
 from unittest import TestCase
 
 from models import db, connect_db, Message, User
@@ -16,7 +16,6 @@ from models import db, connect_db, Message, User
 # connected to the database
 
 os.environ['DATABASE_URL'] = "postgresql:///warbler-test"
-
 
 # Now we can import app
 
@@ -44,10 +43,13 @@ class MessageViewTestCase(TestCase):
 
         self.client = app.test_client()
 
-        self.testuser = User.signup(username="testuser",
-                                    email="test@test.com",
-                                    password="testuser",
-                                    image_url=None)
+        self.testuser = User.signup(
+            username="testuser",
+            email="test@test.com",
+            password="testuser",
+            image_url=None,
+            bio='',
+            location='')
 
         db.session.commit()
 
@@ -71,3 +73,21 @@ class MessageViewTestCase(TestCase):
 
             msg = Message.query.one()
             self.assertEqual(msg.text, "Hello")
+
+    def test_single_message_view(self):
+        """"Does it display a single message correctly?"""
+        with self.client as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser.id
+
+            message = Message(
+                user_id=self.testuser.id,
+                text="I'm a test message!",
+                timestamp=datetime.now())
+            db.session.add(message)
+            db.session.commit()
+            response = self.client.get(f"/messages/{message.id}")
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(b"@testuser", response.data, "Username shows up")
+            self.assertIn(b"a test message!", response.data,
+                          "Text body shows up")

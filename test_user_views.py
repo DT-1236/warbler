@@ -75,4 +75,16 @@ class UserViewTestCase(TestCase):
         response = self.client.get("/signup")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Join Warbler today.", response.data)
-        # Test Post
+        response = self.client.post(
+            "/signup",
+            data=dict(
+                email="asdf@asdf.com",
+                username='testuser2',
+                password='password',
+                image_url='',
+                header_image_url='',
+                bio='',
+                location=''),
+            follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"@testuser2", response.data, "Username shows up")

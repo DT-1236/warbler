@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, render_template, request, flash, redirect, session, g
+from flask import Flask, render_template, request, flash, redirect, session, g, jsonify
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
@@ -336,12 +336,17 @@ def like_or_unlike_message(message_id):
     if like:
         db.session.delete(like)
         # Remove flash with AJAX implementation
-        flash("Message unliked", "danger")
+        if 'path' in request.form:
+            flash("Message unliked", "danger")
     else:
         db.session.add(Like(message_id=message_id, user_id=g.user.id))
-        flash("Message liked", "success")
+        if 'path' in request.form:
+            flash("Message liked", "success")
     db.session.commit()
-    return redirect(request.form['path'])
+    if 'path' in request.form:
+        return redirect(request.form['path'])
+    else:
+        return jsonify('')
 
 
 @app.route('/messages/<int:message_id>/delete', methods=["POST"])
