@@ -160,7 +160,7 @@ class Message(db.Model):
     timestamp = db.Column(
         db.DateTime,
         nullable=False,
-        default=datetime.utcnow(),
+        server_default=db.func.now(),
     )
 
     user_id = db.Column(

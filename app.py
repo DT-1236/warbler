@@ -38,6 +38,7 @@ def add_user_to_g():
     else:
         g.user = None
     g.current_path = request.path
+    g.form = MessageForm()
 
 
 def do_login(user):
@@ -305,7 +306,6 @@ def messages_add():
         return redirect("/")
 
     form = MessageForm()
-
     if form.validate_on_submit():
         msg = Message(text=form.text.data)
         g.user.messages.append(msg)
@@ -326,7 +326,7 @@ def messages_show(message_id):
 
 @app.route('/messages/<int:message_id>/like', methods=["POST"])
 def like_or_unlike_message(message_id):
-    """Toggle message like status"""
+    """Toggle message like status. If path is absent from request.form, it was the AJAX mediated like"""
 
     if not g.user:
         flash("Access unauthorized.", "danger")

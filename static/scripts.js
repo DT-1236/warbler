@@ -8,4 +8,10 @@ $(() => {
       $(event.target).toggleClass('far fas');
     });
   });
+
+  $('.add-message').submit(e => {
+    e.preventDefault();
+    $('#newMessageModal').modal('toggle'); //or  $('#IDModal').modal('hide');
+    return false;
+  });
 });

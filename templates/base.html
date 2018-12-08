@@ -45,7 +45,12 @@
           <img src="{{ g.user.image_url }}" alt="{{ g.user.username }}">
         </a>
       </li>
-      <li><a href="/messages/new">New Message</a></li>
+      <li>
+        <!-- <a href="/messages/new">New Message</a> -->
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#newMessageModal">
+            New message
+          </button>
+      </li>
       <li><a href="/logout">Log out</a></li>
       {% endif %}
     </ul>
@@ -60,5 +65,43 @@
   {% endblock %}
 
 </div>
+<!-- Modal -->
+<div class="modal fade" id="newMessageModal" tabindex="-1" role="dialog" aria-labelledby="newMessageModalLongTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="newMessageModalLongTitle">Warble something cool!</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="row justify-content-center">
+          <div class="col-md-12">
+            <form action="/messages/new" method="POST">
+                    {{ g.form.csrf_token }}
+             <div>
+                      {% if g.form.text.errors %}
+                        {% for error in g.form.text.errors %}
+              <span class="text-danger">
+                        {{ error }}
+              </span>
+                        {% endfor %}
+                      {% endif %}
+                      {{ g.form.text(placeholder="What's happening?", class="form-control ", rows="3") }}
+            </div>
+          </div>
+                  
+        </div>
+          <div class="modal-footer">
+            <button class="btn mx-auto btn-outline-success add-message">Add my message!</button> 
+              <!-- data-dismiss="modal"  -->
+          </div>
+          </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
